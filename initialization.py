@@ -83,17 +83,31 @@ class InitializationAnalyzer:
                     incoming = self._meet_predecessors(block_id, facts)
                 outgoing = transfer(self.cfg.blocks[block_id], incoming)
 
-                # TODO: compare incoming/outgoing com os estados anteriores.
-                # Grave os novos estados e sinalize changed quando houver
-                # alteração. A convergência depende dos conjuntos, não de um
-                # número fixo de passadas. Não emita erros neste laço.
-                raise NotImplementedError("implemente a atualização até ponto fixo")
+                if incoming != facts.initialized_in[block_id]:
+                    changed = True
+                    facts.initialized_in[block_id] = incoming
+
+                if outgoing != facts.initialized_out[block_id]:
+                    changed = True
+                    facts.initialized_out[block_id] = outgoing
+
         return facts
 
     def _meet_predecessors(
         self, block_id: BlockId, facts: InitializationFacts,
     ) -> set[Symbol]:
         predecessors = self.cfg.blocks[block_id].predecessors & self.reachable
-        # TODO: interseção dos OUT destes predecessores. Não use união.
-        # Nunca modifique um conjunto OUT ao calcular a interseção.
-        raise NotImplementedError("implemente a junção de inicialização")
+
+        # primeiro ciclo pegamos os valores de uma das entradas
+        first_cycle = True
+        intersection = set()
+        for pred in predecessors:
+            if first_cycle:
+                intersection = set(facts.initialized_out[pred]) # estamos usando 'set()' porque não queremos modificar o facts, set cria novos dados em vez de apontar à origem
+                first_cycle = False
+
+            # a partir do segundo ciclo, se houver, pegaremos apenas a interseção dos valores
+            else:
+                intersection = intersection.intersection(facts.initialized_out[pred])
+
+        return intersection
