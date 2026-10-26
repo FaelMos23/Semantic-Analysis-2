@@ -1,4 +1,3 @@
-
 """Construa um CFG auxiliar por função, preservando os nós da AST."""
 
 from __future__ import annotations
@@ -36,7 +35,7 @@ class CFGBuilder:
         # Sinalizar fim de bloco
         if current is not None:
             self.cfg.blocks[current].operations.append(ScopeExit(block.metadata["scope"]))
-
+            
         return current
 
     def _build_statement(self, statement: Stmt, current: BlockId) -> BlockId | None:
@@ -52,9 +51,9 @@ class CFGBuilder:
 
         # adiciona a operação e termina o bloco
         elif isinstance(statement, ReturnStmt):
-            self.cfg.blocks[current].operations.append(statement)
+            # não adicionamos em operations
             self.cfg.terminate(current, Return(statement))
-
+            
             # sem bloco seguinte, retornamos None
             return None
 
@@ -70,10 +69,12 @@ class CFGBuilder:
             else_blk = self.cfg.new_block()
         next_blk = self.cfg.new_block()
 
+
         if statement.else_block:
             self.cfg.terminate(current, Branch(statement.condition, then_blk.id, else_blk.id))
         else:
             self.cfg.terminate(current, Branch(statement.condition, then_blk.id, next_blk.id))
+
 
         # se os blocos then e else não retornam None, quer dizer que após sua execução, continuam pelo código seguinte
         curr_then = self._build_block(statement.then_block, then_blk.id)
@@ -98,14 +99,17 @@ class CFGBuilder:
         body_blk = self.cfg.new_block()
         next_blk = self.cfg.new_block()
 
+
         # do bloco anterior para o bloco de teste, no teste a condição é avaliada
         self.cfg.terminate(current, Jump(test_blk.id))
         self.cfg.terminate(test_blk.id, Branch(statement.condition, body_blk.id, next_blk.id))
+
 
         curr_body = self._build_block(statement.body, body_blk.id)
 
         if curr_body is not None:
             self.cfg.terminate(curr_body, Jump(test_blk.id))
+
 
         # loop infinito
         if isinstance(statement.condition, BoolLiteral) and statement.condition.value is True:
